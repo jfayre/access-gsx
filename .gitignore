@@ -1,0 +1,22 @@
+# Build outputs
+bin/
+obj/
+
+# User-specific files
+*.user
+*.userosscache
+*.suo
+
+# VS/VS Code caches
+.vs/
+.vscode/
+
+# Rider/JetBrains
+.idea/
+
+# Packaging
+*.nupkg
+*.snupkg
+
+# Logs
+*.log
