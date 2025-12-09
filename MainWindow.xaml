@@ -24,6 +24,9 @@
                      IsReadOnly="True"
                      IsTabStop="True"
                      TabIndex="0"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     VerticalScrollBarVisibility="Auto"
                      AutomationProperties.Name="Connection status" />
         </Border>
 
@@ -44,7 +47,7 @@
                  IsReadOnlyCaretVisible="True"/>
 
         <TextBox Grid.Row="2"
-                 x:Name="LogBox"
+                 x:Name="ToolTipBox"
                  FontFamily="Consolas"
                  FontSize="11"
                  AcceptsReturn="True"
@@ -54,7 +57,7 @@
                  VerticalScrollBarVisibility="Auto"
                  Background="White"
                  Foreground="Black"
-                 AutomationProperties.Name="Status log"
+                 AutomationProperties.Name="Most recent GSX tooltip"
                  TabIndex="2" />
     </Grid>
 </Window>

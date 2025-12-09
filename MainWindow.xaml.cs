@@ -76,9 +76,9 @@ namespace GSXRemote
 
         private void OnWindowLoaded(object sender, RoutedEventArgs e)
         {
-            AppendLog("GSX Remote Control ready. Press M to open menu, Q to quit. Use arrows to browse the menu and Enter to choose.");
+            AppendLog("GSX Remote Control ready. Press F5 to open the menu. Use arrows to browse the menu and Enter to choose.");
             AppendLog("Waiting for Microsoft Flight Simulator / SimConnect...");
-            LogBox.Focus();
+            StatusBox.Focus();
         }
 
         private void OnSourceInitialized(object? sender, EventArgs e)
@@ -352,7 +352,7 @@ namespace GSXRemote
             _menuTitle = title;
             var builder = new StringBuilder();
             builder.AppendLine(title);
-            builder.AppendLine();
+            // builder.AppendLine();
 
             for (int i = 0; i < _menuOptions.Count; i++)
             {
@@ -368,39 +368,18 @@ namespace GSXRemote
             builder.AppendLine("Press Enter to choose the highlighted item. Numbers/letters work too.");
 
             MenuBox.Text = builder.ToString();
-            MoveCaretToHighlightedLine();
         }
 
-        private void MoveCaretToHighlightedLine()
-        {
-            if (_highlightedIndex < 0)
-                return;
-
-            var lines = MenuBox.Text.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
-            int targetLine = 2 + _highlightedIndex;
-            if (targetLine >= lines.Length)
-                return;
-
-            int start = 0;
-            for (int i = 0; i < targetLine; i++)
-            {
-                start += lines[i].Length + Environment.NewLine.Length;
-            }
-
-            MenuBox.SelectionStart = Math.Min(start, MenuBox.Text.Length);
-            MenuBox.SelectionLength = lines[targetLine].Length;
-            MenuBox.ScrollToLine(targetLine);
-        }
 
         private void HideMenu(bool timedOut = false)
         {
             _menuOpen = false;
             MenuBox.Text = timedOut
-                ? "[GSX Menu] Timeout. Press M to re-open."
-                : "GSX Menu hidden. Press M to open it.";
+                ? "[GSX Menu] Timeout. Press F5 to re-open."
+                : "GSX Menu hidden. Press F5 to open it.";
 
             if (_couatlStarted)
-                AppendLog("Press M to open the GSX menu, or Q to quit.");
+                AppendLog("Press F5 to open the GSX menu.");
             else
                 AppendLog("Couatl engine has not started yet.");
         }
@@ -441,10 +420,7 @@ namespace GSXRemote
             {
                 var lines = File.ReadAllLines(_toolTipPath, Encoding.UTF8);
                 AppendLog($"GSX tooltip received: timeout {data}s");
-                foreach (var line in lines)
-                {
-                    AppendLog(line);
-                }
+                ToolTipBox.Text = string.Join(Environment.NewLine, lines);
             }
             catch (Exception ex)
             {
@@ -513,8 +489,8 @@ namespace GSXRemote
             if (string.IsNullOrWhiteSpace(text))
                 return;
 
-            LogBox.AppendText($"{DateTime.Now:HH:mm:ss} {text}{Environment.NewLine}");
-            LogBox.ScrollToEnd();
+            StatusBox.AppendText($"{DateTime.Now:HH:mm:ss} {text}{Environment.NewLine}");
+            StatusBox.ScrollToEnd();
         }
 
         private void OnMenuPreviewKeyDown(object sender, KeyEventArgs e) => HandleKey(e);
