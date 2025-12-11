@@ -6,12 +6,15 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using Microsoft.FlightSimulator.SimConnect;
 using Microsoft.Win32;
+using DavyKager;
+using System.Windows.Controls;
 
-namespace GSXRemote
+namespace AccessGSX
 {
     public partial class MainWindow : Window
     {
@@ -34,6 +37,7 @@ namespace GSXRemote
         private int _highlightedIndex = -1;
         private string _menuTitle = "GSX Menu";
         private HwndSource? _hwndSource;
+        private readonly UserSettings _settings = UserSettings.Load();
 
         private readonly List<MenuOption> _menuOptions = new();
 
@@ -76,8 +80,14 @@ namespace GSXRemote
 
         private void OnWindowLoaded(object sender, RoutedEventArgs e)
         {
-            AppendLog("GSX Remote Control ready. Press F5 to open the menu. Use arrows to browse the menu and Enter to choose.");
+            AppendLog("GSX Remote Control ready. Press F5 to open the menu. Use number keys or A–E to choose.");
             AppendLog("Waiting for Microsoft Flight Simulator / SimConnect...");
+            SpeakMenuCheckBox.IsChecked = _settings.SpeakMenu;
+            SpeakTooltipCheckBox.IsChecked = _settings.SpeakTooltip;
+            if (_settings.SpeakMenu)
+                TryLoadTolkOrDisable(SpeakMenuCheckBox);
+            if (_settings.SpeakTooltip)
+                TryLoadTolkOrDisable(SpeakTooltipCheckBox);
             StatusBox.Focus();
         }
 
@@ -365,9 +375,10 @@ namespace GSXRemote
             }
 
             builder.AppendLine();
-            builder.AppendLine("Press Enter to choose the highlighted item. Numbers/letters work too.");
+            builder.AppendLine("Press number keys or A–E to choose an item.");
 
             MenuBox.Text = builder.ToString();
+            SpeakMenuContent();
         }
 
 
@@ -421,6 +432,7 @@ namespace GSXRemote
                 var lines = File.ReadAllLines(_toolTipPath, Encoding.UTF8);
                 AppendLog($"GSX tooltip received: timeout {data}s");
                 ToolTipBox.Text = string.Join(Environment.NewLine, lines);
+                SpeakTooltipIfEnabled(lines);
             }
             catch (Exception ex)
             {
@@ -508,37 +520,7 @@ namespace GSXRemote
             if (!_menuOpen)
                 return;
 
-            if (e.Key == Key.Up)
-            {
-                e.Handled = true;
-                MoveSelection(-1);
-            }
-            else if (e.Key == Key.Down)
-            {
-                e.Handled = true;
-                MoveSelection(1);
-            }
-            else if (e.Key == Key.Enter)
-            {
-                e.Handled = true;
-                if (_highlightedIndex >= 0 && _highlightedIndex < _menuOptions.Count)
-                {
-                    CloseWithChoice(_menuOptions[_highlightedIndex].Choice);
-                }
-            }
-            else
-            {
-                HandleChoiceKey(e);
-            }
-        }
-
-        private void MoveSelection(int delta)
-        {
-            if (_menuOptions.Count == 0)
-                return;
-
-            _highlightedIndex = (_highlightedIndex + delta + _menuOptions.Count) % _menuOptions.Count;
-            RenderMenu(_menuTitle);
+            HandleChoiceKey(e);
         }
 
         private void HandleChoiceKey(KeyEventArgs e)
@@ -564,6 +546,79 @@ namespace GSXRemote
             {
                 e.Handled = true;
                 CloseWithChoice(choice);
+            }
+        }
+
+        private void OnSpeakMenuToggled(object sender, RoutedEventArgs e)
+        {
+            if (SpeakMenuCheckBox.IsChecked == true)
+            {
+                TryLoadTolkOrDisable(SpeakMenuCheckBox);
+            }
+            _settings.SpeakMenu = SpeakMenuCheckBox.IsChecked == true;
+            _settings.Save();
+        }
+
+        private void OnSpeakTooltipToggled(object sender, RoutedEventArgs e)
+        {
+            if (SpeakTooltipCheckBox.IsChecked == true)
+            {
+                TryLoadTolkOrDisable(SpeakTooltipCheckBox);
+            }
+            _settings.SpeakTooltip = SpeakTooltipCheckBox.IsChecked == true;
+            _settings.Save();
+        }
+
+        private void SpeakMenuContent()
+        {
+            if (SpeakMenuCheckBox.IsChecked != true)
+                return;
+
+            var text = MenuBox.Text;
+            if (string.IsNullOrWhiteSpace(text))
+                return;
+
+            try
+            {
+                Tolk.Output(text, true);
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"Tolk speak failed: {ex.Message}");
+                SpeakMenuCheckBox.IsChecked = false;
+            }
+        }
+
+        private void SpeakTooltipIfEnabled(IEnumerable<string> lines)
+        {
+            if (SpeakTooltipCheckBox.IsChecked != true)
+                return;
+
+            var text = string.Join(Environment.NewLine, lines);
+            if (string.IsNullOrWhiteSpace(text))
+                return;
+
+            try
+            {
+                Tolk.Output(text, true);
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"Tolk speak tooltip failed: {ex.Message}");
+                SpeakTooltipCheckBox.IsChecked = false;
+            }
+        }
+
+        private void TryLoadTolkOrDisable(CheckBox sourceCheckBox)
+        {
+            try
+            {
+                Tolk.Load();
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"Failed to load Tolk: {ex.Message}");
+                sourceCheckBox.IsChecked = false;
             }
         }
     }

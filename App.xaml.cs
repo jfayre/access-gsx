@@ -1,6 +1,6 @@
 using System.Windows;
 
-namespace GSXRemote
+namespace AccessGSX
 {
     public partial class App : Application
     {

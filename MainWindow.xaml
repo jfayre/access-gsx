@@ -1,7 +1,7 @@
-<Window x:Class="GSXRemote.MainWindow"
+<Window x:Class="AccessGSX.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="GSX Remote Control"
+        Title="Access GSX"
         Width="900"
         Height="700"
         MinWidth="720"
@@ -10,12 +10,16 @@
         Loaded="OnWindowLoaded"
         SourceInitialized="OnSourceInitialized">
     <Grid Margin="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <Border Grid.Row="0" Padding="4" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
+        <Border Grid.Row="0" Grid.Column="0" Padding="4" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
             <TextBox x:Name="StatusBox"
                      Text="Status: Disconnected"
                      BorderThickness="0"
@@ -27,8 +31,24 @@
                      AcceptsReturn="True"
                      TextWrapping="Wrap"
                      VerticalScrollBarVisibility="Auto"
+                     IsReadOnlyCaretVisible="True"
                      AutomationProperties.Name="Connection status" />
         </Border>
+
+        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="8,4,0,0">
+            <CheckBox x:Name="SpeakMenuCheckBox"
+                      Content="Speak menu"
+                      IsChecked="False"
+                      Margin="8,0,0,0"
+                      AutomationProperties.Name="Speak menu items"
+                      Click="OnSpeakMenuToggled" />
+            <CheckBox x:Name="SpeakTooltipCheckBox"
+                      Content="Speak tooltips"
+                      IsChecked="False"
+                      Margin="12,0,0,0"
+                      AutomationProperties.Name="Speak tooltips"
+                      Click="OnSpeakTooltipToggled" />
+        </StackPanel>
 
         <TextBox Grid.Row="1"
                  x:Name="MenuBox"
