@@ -414,6 +414,9 @@ namespace AccessGSX
                 AppendLog("Press F5 to open the GSX menu.");
             else
                 AppendLog("Couatl engine has not started yet.");
+
+            if (timedOut)
+                SpeakMenuTimeout();
         }
 
         // Send the selected choice back to GSX and tidy up the menu view.
@@ -612,6 +615,22 @@ namespace AccessGSX
             catch (Exception ex)
             {
                 AppendLog($"Tolk speak failed: {ex.Message}");
+                SpeakMenuCheckBox.IsChecked = false;
+            }
+        }
+
+        private void SpeakMenuTimeout()
+        {
+            if (SpeakMenuCheckBox.IsChecked != true)
+                return;
+
+            try
+            {
+                Tolk.Output("Menu timeout", true);
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"Tolk speak timeout failed: {ex.Message}");
                 SpeakMenuCheckBox.IsChecked = false;
             }
         }

@@ -77,7 +77,7 @@
                  VerticalScrollBarVisibility="Auto"
                  Background="White"
                  Foreground="Black"
-                 AutomationProperties.Name="Most recent GSX tooltip"
+                 AutomationProperties.Name="GSX tooltip"
                  TabIndex="2" />
     </Grid>
 </Window>
