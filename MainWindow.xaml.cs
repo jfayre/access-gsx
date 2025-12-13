@@ -1,3 +1,5 @@
+// Main window for AccessGSX: WPF client that talks to MSFS via SimConnect,
+// mirrors the GSX in-sim menu, and optionally speaks content through Tolk.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -12,7 +14,6 @@ using System.Windows.Interop;
 using Microsoft.FlightSimulator.SimConnect;
 using Microsoft.Win32;
 using DavyKager;
-using System.Windows.Controls;
 
 namespace AccessGSX
 {
@@ -20,6 +21,7 @@ namespace AccessGSX
     {
         private const int WM_USER_SIMCONNECT = 0x0402;
 
+        // Registry and file names used to locate GSX assets on disk.
         private const string SubKey = @"Software\Fsdreamteam\";
         private const string ValueName = "root";
         private const string GsxPackageFolder = @"MSFS\fsdreamteam-gsx-pro";
@@ -27,6 +29,7 @@ namespace AccessGSX
         private const string GsxTooltipFileName = "tooltip";
         private const string GsxMenuFileName = "menu";
 
+        // Runtime state captured as events arrive from SimConnect and disk.
         private SimConnect? _simConnect;
         private bool _menuOpen;
         private bool _couatlStarted;
@@ -41,6 +44,7 @@ namespace AccessGSX
 
         private readonly List<MenuOption> _menuOptions = new();
 
+        // SimConnect identifiers for data requests/definitions/groups/events.
         private enum DataRequestId
         {
             RequestRemote,
@@ -78,6 +82,7 @@ namespace AccessGSX
             InitializeComponent();
         }
 
+        // Initialize UI state, restore persisted preferences, and give focus to status.
         private void OnWindowLoaded(object sender, RoutedEventArgs e)
         {
             AppendLog("GSX Remote Control ready. Press F5 to open the menu. Use number keys or A–E to choose.");
@@ -98,6 +103,7 @@ namespace AccessGSX
             TryConnect();
         }
 
+        // Pump SimConnect messages through the WPF window handle.
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
             if (msg == WM_USER_SIMCONNECT && _simConnect != null)
@@ -118,6 +124,7 @@ namespace AccessGSX
 
         protected override void OnClosing(CancelEventArgs e)
         {
+            // Gracefully stop remote control and drop SimConnect on exit.
             _shuttingDown = true;
             SetRemoteControl(0);
             Disconnect();
@@ -128,6 +135,7 @@ namespace AccessGSX
         {
             try
             {
+                // Use the window handle to register for SimConnect callbacks.
                 var handle = new WindowInteropHelper(this).Handle;
                 _simConnect = new SimConnect("GSX_Remote", handle, WM_USER_SIMCONNECT, null, 0);
                 HookSimConnectEvents();
@@ -167,6 +175,7 @@ namespace AccessGSX
             if (_simConnect == null)
                 return;
 
+            // Subscribe to SimConnect lifecycle, event, and data callbacks.
             _simConnect.OnRecvOpen += OnSimConnectOpen;
             _simConnect.OnRecvQuit += OnSimConnectQuit;
             _simConnect.OnRecvException += OnSimConnectException;
@@ -176,6 +185,7 @@ namespace AccessGSX
 
         private void OnSimConnectOpen(SimConnect sender, SIMCONNECT_RECV_OPEN data)
         {
+            // When the channel opens, register sim vars, events, and request data.
             AppendLog("SimConnect channel opened.");
             DefineSimVars();
             MapEvents();
@@ -188,6 +198,7 @@ namespace AccessGSX
 
         private void OnSimConnectQuit(SimConnect sender, SIMCONNECT_RECV data)
         {
+            // Sim has closed the pipe; update UI and cleanup.
             AppendLog("Simulator has closed the connection.");
             StatusBox.Text = "Status: Simulator disconnected";
             if (!_shuttingDown)
@@ -199,11 +210,13 @@ namespace AccessGSX
 
         private void OnSimConnectException(SimConnect sender, SIMCONNECT_RECV_EXCEPTION data)
         {
+            // Log exception codes from SimConnect for diagnostics.
             AppendLog($"SimConnect exception: {data.dwException}");
         }
 
         private void OnSimConnectEvent(SimConnect sender, SIMCONNECT_RECV_EVENT data)
         {
+            // GSX publishes menu/tooltip activity via external system events.
             switch ((EventId)data.uEventID)
             {
                 case EventId.ExternalSystemToggle:
@@ -243,6 +256,7 @@ namespace AccessGSX
 
         private void OnSimConnectSimObjectData(SimConnect sender, SIMCONNECT_RECV_SIMOBJECT_DATA data)
         {
+            // Handle LVar changes for Couatl state and remote-control flag.
             switch ((DataRequestId)data.dwRequestID)
             {
                 case DataRequestId.RequestCouatlStarted:
@@ -269,6 +283,7 @@ namespace AccessGSX
             if (_simConnect == null)
                 return;
 
+            // Register the GSX LVars we read and write.
             _simConnect.AddToDataDefinition(DataDefineId.CouatlStarted, "L:FSDT_GSX_COUATL_STARTED", "number", SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
             _simConnect.AddToDataDefinition(DataDefineId.MenuOpen, "L:FSDT_GSX_MENU_OPEN", "number", SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
             _simConnect.AddToDataDefinition(DataDefineId.MenuChoice, "L:FSDT_GSX_MENU_CHOICE", "number", SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
@@ -285,6 +300,7 @@ namespace AccessGSX
             if (_simConnect == null)
                 return;
 
+            // Bind GSX external events and ensure they are delivered with high priority.
             _simConnect.MapClientEventToSimEvent(EventId.ExternalSystemSet, "EXTERNAL_SYSTEM_SET");
             _simConnect.MapClientEventToSimEvent(EventId.ExternalSystemToggle, "EXTERNAL_SYSTEM_TOGGLE");
             _simConnect.AddClientEventToNotificationGroup(GroupId.MainGroup, EventId.ExternalSystemSet, false);
@@ -297,6 +313,7 @@ namespace AccessGSX
             if (_simConnect == null)
                 return;
 
+            // Poll GSX LVars once per visual frame, only when changed.
             _simConnect.RequestDataOnSimObject(DataRequestId.RequestRemote, DataDefineId.RemoteControl, SimConnect.SIMCONNECT_OBJECT_ID_USER, SIMCONNECT_PERIOD.VISUAL_FRAME, SIMCONNECT_DATA_REQUEST_FLAG.CHANGED, 0, 0, 0);
             _simConnect.RequestDataOnSimObject(DataRequestId.RequestCouatlStarted, DataDefineId.CouatlStarted, SimConnect.SIMCONNECT_OBJECT_ID_USER, SIMCONNECT_PERIOD.VISUAL_FRAME, SIMCONNECT_DATA_REQUEST_FLAG.CHANGED, 0, 0, 0);
         }
@@ -306,10 +323,12 @@ namespace AccessGSX
             if (_simConnect == null)
                 return;
 
+            // Hide the in-sim toolbar panel so we control the menu externally.
             _simConnect.MapClientEventToSimEvent(EventId.ExternalSystemToggle, "EXTERNAL_SYSTEM_TOGGLE");
             _simConnect.TransmitClientEvent(0, EventId.ExternalSystemToggle, 4, GroupId.MainGroup, SIMCONNECT_EVENT_FLAG.GROUPID_IS_PRIORITY);
         }
 
+        // Read GSX menu file from disk, rebuild options list, and render text view.
         private void ReloadMenu()
         {
             if (string.IsNullOrWhiteSpace(_menuPath))
@@ -357,6 +376,7 @@ namespace AccessGSX
             MenuBox.Focus();
         }
 
+        // Render the menu text with a simple caret indicator and announce if needed.
         private void RenderMenu(string title)
         {
             _menuTitle = title;
@@ -382,6 +402,7 @@ namespace AccessGSX
         }
 
 
+        // Clear menu view and optionally show timeout message when GSX closes it.
         private void HideMenu(bool timedOut = false)
         {
             _menuOpen = false;
@@ -395,6 +416,7 @@ namespace AccessGSX
                 AppendLog("Couatl engine has not started yet.");
         }
 
+        // Send the selected choice back to GSX and tidy up the menu view.
         private void CloseWithChoice(int choice)
         {
             AppendLog($"GSX closeWithChoice({choice})");
@@ -419,6 +441,7 @@ namespace AccessGSX
             }
         }
 
+        // Refresh tooltip text from disk when GSX publishes updates.
         private void ReloadAndShowToolTip(uint data)
         {
             if (string.IsNullOrWhiteSpace(_toolTipPath))
@@ -470,6 +493,7 @@ namespace AccessGSX
                 return;
             }
 
+            // Construct GSX menu/tooltip paths relative to the FSDT root.
             _toolTipPath = Path.Combine(_fsdtRoot, GsxPackageFolder, GsxPackageFolderHtml, GsxTooltipFileName);
             _menuPath = Path.Combine(_fsdtRoot, GsxPackageFolder, GsxPackageFolderHtml, GsxMenuFileName);
             AppendLog($"FSDT root located at: {_fsdtRoot}");
@@ -501,6 +525,7 @@ namespace AccessGSX
             if (string.IsNullOrWhiteSpace(text))
                 return;
 
+            // Push timestamped lines into the status text area.
             StatusBox.AppendText($"{DateTime.Now:HH:mm:ss} {text}{Environment.NewLine}");
             StatusBox.ScrollToEnd();
         }
@@ -511,6 +536,7 @@ namespace AccessGSX
 
         private void HandleKey(KeyEventArgs e)
         {
+            // F5 requests GSX to open its menu.
             if (e.Key == Key.F5)
             {
                 SetMenuOpenVar(1);
@@ -580,6 +606,7 @@ namespace AccessGSX
 
             try
             {
+                // Speak the entire menu buffer so users hear all available options.
                 Tolk.Output(text, true);
             }
             catch (Exception ex)
@@ -600,6 +627,7 @@ namespace AccessGSX
 
             try
             {
+                // Read back the latest tooltip content when enabled.
                 Tolk.Output(text, true);
             }
             catch (Exception ex)
@@ -613,6 +641,7 @@ namespace AccessGSX
         {
             try
             {
+                // Load Tolk once for the process; if it fails, revert the toggle.
                 Tolk.Load();
             }
             catch (Exception ex)

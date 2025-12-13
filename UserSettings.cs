@@ -1,3 +1,4 @@
+// Lightweight JSON-backed settings store for remembering user preferences.
 using System;
 using System.IO;
 using System.Text.Json;
@@ -11,6 +12,7 @@ namespace AccessGSX
 
         private static string SettingsPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AccessGSX", "settings.json");
 
+        // Load settings from disk if available; otherwise return defaults.
         public static UserSettings Load()
         {
             try
@@ -31,6 +33,7 @@ namespace AccessGSX
             return new UserSettings();
         }
 
+        // Persist settings to user-local AppData; ignore errors to avoid crashes.
         public void Save()
         {
             try
